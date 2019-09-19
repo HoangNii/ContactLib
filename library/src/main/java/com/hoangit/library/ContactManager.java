@@ -5,6 +5,9 @@ import android.content.Context;
 import android.database.Cursor;
 import android.net.Uri;
 import android.provider.ContactsContract;
+import android.text.TextUtils;
+import android.util.Log;
+import java.util.List;
 
 public class ContactManager {
 
@@ -15,7 +18,6 @@ public class ContactManager {
             contactManager = new ContactManager();
         return contactManager;
     }
-
 
     public Contact.ContactCursor getContactCursor(Context context) {
         return getContactCursor(context,Contact.Sort.Alphabetical);
@@ -41,39 +43,49 @@ public class ContactManager {
         return new Contact.ContactCursor(contentResolver.query(uri, null, clause, null, sortOrder.getKey()));
     }
 
-    public Contact.ContactCursor getContactCursorFromNumber(Context context,String number) {
-        return getContactCursor(context,number, Contact.Sort.Alphabetical);
-    }
+    public Contact getContactFromNumber(Context context,String phone) {
+        if(TextUtils.isEmpty(phone))return null;
+        Contact.ContactCursor cursor = getContactCursor(context,phone);
+        if(cursor!=null&&cursor.moveToFirst()){
+            Contact contact = cursor.getContact();
+            cursor.close();
+            String number = contact.getNumber();
+            if(TextUtils.isEmpty(number)){
+                number = contact.getMobileNumber(context).get();
+                Log.e("ContactManager",number+"");
+            }
+            if(TextUtils.isEmpty(number)){
+                List<String> numbers =  contact.getNumbers(context);
+                if(numbers.size()>0){
+                    for (String s:numbers){
+                        if(s.replaceAll(" ","").equals(phone.replaceAll(" ",""))){
+                            return contact;
+                        }
+                    }
+                }
+            }
+            if(!TextUtils.isEmpty(number)&&number.replaceAll(" ","")
+                    .equals(phone.replaceAll(" ",""))){
+                return contact;
+            }
 
-    public Contact.ContactCursor getContactCursorFromNumber(Context context,String number, Contact.Sort sortOrder) {
-        String[] mProjection = { ContactsContract.PhoneLookup._ID, ContactsContract.PhoneLookup.NUMBER, ContactsContract.PhoneLookup.DISPLAY_NAME };
-        ContentResolver contentResolver = context.getContentResolver();
-        Uri uri = Uri.withAppendedPath(ContactsContract.Contacts.CONTENT_FILTER_URI, number);
-        return new Contact.ContactCursor(contentResolver.query(uri, mProjection, null, null, sortOrder.getKey()));
+        }
+        return null;
     }
-
-    public Contact.ContactCursor getContactCursorFromId(Context context,String id) {
-        return getContactCursor(context,id, Contact.Sort.Alphabetical);
+    public Contact getContactFromId(Context context,String id) {
+        if(TextUtils.isEmpty(id))return null;
+        Contact.ContactCursor cursor = getContactCursor(context);
+        if(cursor!=null&&cursor.moveToFirst()){
+            do {
+                Contact contact = cursor.getContact();
+                if(contact.getId().equals(id)){
+                    return contact;
+                }
+            }while (cursor.moveToNext());
+            cursor.close();
+        }
+        return null;
     }
-
-    public Contact.ContactCursor getContactCursorFromId(Context context,String id, Contact.Sort sortOrder) {
-        String[] mProjection = { ContactsContract.PhoneLookup._ID};
-        ContentResolver contentResolver = context.getContentResolver();
-        Uri uri = Uri.withAppendedPath(ContactsContract.Contacts.CONTENT_FILTER_URI, id);
-        return new Contact.ContactCursor(contentResolver.query(uri, mProjection, null, null, sortOrder.getKey()));
-    }
-
-
-    public boolean contactExists(Context context, String number) {
-        Uri lookupUri = Uri.withAppendedPath(
-                ContactsContract.PhoneLookup.CONTENT_FILTER_URI,
-                Uri.encode(number));
-        String[] mPhoneNumberProjection = { ContactsContract.PhoneLookup._ID, ContactsContract.PhoneLookup.NUMBER, ContactsContract.PhoneLookup.DISPLAY_NAME };
-        Cursor cur = context.getContentResolver().query(lookupUri,mPhoneNumberProjection, null, null, null);
-        if (cur!=null&&cur.moveToFirst()) {
-            cur.close();
-            return true;
-        }else return false;
-    }
+    
 
 }
