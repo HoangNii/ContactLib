@@ -32,6 +32,8 @@ public class Contact implements User, Parcelable {
     private final String mPhotoUri;
     private final String mPhotoThumbUri;
 
+    private boolean isSelect;
+
     protected Contact(Cursor c) {
         if (DEBUG) {
             Log.d(TAG, "--------Printing Columns-------");
@@ -94,6 +96,14 @@ public class Contact implements User, Parcelable {
 
     public long getIdAsLong() {
         return mId;
+    }
+
+    public boolean isSelect() {
+        return isSelect;
+    }
+
+    public void setSelect(boolean select) {
+        isSelect = select;
     }
 
     public synchronized Future<String> getMobileNumber(final Context context) {
